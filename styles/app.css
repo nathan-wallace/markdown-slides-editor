@@ -542,6 +542,10 @@ input:focus-visible {
   margin-top: 0.75rem;
 }
 
+.slide-card--next {
+  cursor: pointer;
+}
+
 .timer {
   font-size: 2.2rem;
   margin: 0;

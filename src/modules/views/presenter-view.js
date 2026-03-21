@@ -1,7 +1,12 @@
 import { createSyncChannel } from "../sync.js";
-import { getPresentationDurationMinutes, getSlideTitle } from "../presentation-state.js";
+import {
+  getNextPosition,
+  getPresentationDurationMinutes,
+  getPreviousPosition,
+  getSlideTitle,
+} from "../presentation-state.js";
 import { applyDeckTheme } from "../theme.js";
-import { compileSource, createDeckFrame, mountSlideInto } from "./shared.js";
+import { compileSource, createButton, createDeckFrame, mountSlideInto } from "./shared.js";
 
 function formatElapsed(startTime) {
   const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
@@ -51,6 +56,7 @@ export function createPresenterView(root, initialSource) {
 
   root.replaceChildren(frame);
 
+  const actions = frame.querySelector(".topbar__actions");
   const currentFrame = frame.querySelector("#presenter-current");
   const nextFrame = frame.querySelector("#presenter-next");
   const notesNode = frame.querySelector("#presenter-notes");
@@ -58,11 +64,25 @@ export function createPresenterView(root, initialSource) {
   const remainingNode = frame.querySelector("#presenter-remaining");
   const outlineNode = frame.querySelector("#presenter-outline");
   const resetTimerButton = frame.querySelector("#presenter-reset-timer");
+  const previousButton = createButton("Previous");
+  const nextButton = createButton("Next");
+  actions.append(previousButton, nextButton);
   let timerStart = startedAt;
   let lastDurationMinutes = 30;
+  let compiled = compileSource(source);
+
+  function publishState() {
+    sync.postMessage({
+      type: "slide-changed",
+      activeSlideIndex,
+      revealStep,
+      source,
+      timestamp: Date.now(),
+    });
+  }
 
   function render() {
-    const compiled = compileSource(source);
+    compiled = compileSource(source);
     applyDeckTheme(compiled.metadata);
     const currentSlide = compiled.renderedSlides[activeSlideIndex] || compiled.renderedSlides[0];
     const nextSlide = compiled.renderedSlides[activeSlideIndex + 1];
@@ -75,13 +95,25 @@ export function createPresenterView(root, initialSource) {
     outlineNode.innerHTML = compiled.renderedSlides
       .map((renderedSlide, index) => {
         const currentClass = index === activeSlideIndex ? ' class="is-current"' : "";
-        return `<li${currentClass}><span>${getSlideTitle(renderedSlide, index)}</span></li>`;
+        return `<li${currentClass}><button type="button" data-slide-index="${index}">${getSlideTitle(renderedSlide, index)}</button></li>`;
       })
       .join("");
 
     const elapsedSeconds = Math.floor((Date.now() - timerStart) / 1000);
     const remainingSeconds = Math.max(0, lastDurationMinutes * 60 - elapsedSeconds);
     remainingNode.textContent = `Remaining ${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(remainingSeconds % 60).padStart(2, "0")}`;
+  }
+
+  function move(delta) {
+    compiled = compileSource(source);
+    const nextPosition =
+      delta > 0
+        ? getNextPosition(compiled, activeSlideIndex, revealStep)
+        : getPreviousPosition(compiled, activeSlideIndex, revealStep);
+    activeSlideIndex = nextPosition.activeSlideIndex;
+    revealStep = nextPosition.revealStep;
+    render();
+    publishState();
   }
 
   sync.subscribe((message) => {
@@ -95,6 +127,39 @@ export function createPresenterView(root, initialSource) {
       revealStep = message.revealStep;
     }
     render();
+  });
+
+  previousButton.addEventListener("click", () => move(-1));
+  nextButton.addEventListener("click", () => move(1));
+
+  nextFrame.addEventListener("click", () => {
+    if (compiled.renderedSlides[activeSlideIndex + 1]) {
+      activeSlideIndex += 1;
+      revealStep = 0;
+      render();
+      publishState();
+    }
+  });
+
+  outlineNode.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-slide-index]");
+    if (!button) return;
+    activeSlideIndex = Number.parseInt(button.dataset.slideIndex, 10) || 0;
+    revealStep = 0;
+    render();
+    publishState();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+      event.preventDefault();
+      move(1);
+    }
+
+    if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      move(-1);
+    }
   });
 
   window.setInterval(() => {
@@ -112,4 +177,5 @@ export function createPresenterView(root, initialSource) {
 
   timerNode.textContent = formatElapsed(timerStart);
   render();
+  publishState();
 }

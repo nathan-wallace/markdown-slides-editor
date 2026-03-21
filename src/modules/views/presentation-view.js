@@ -122,10 +122,10 @@ export function createPresentationView(root, initialSource) {
   });
 
   sync.subscribe((message) => {
-    if (message.type === "deck-updated") {
+    if (message.type === "deck-updated" || message.type === "slide-changed") {
       source = message.source || source;
       activeSlideIndex = message.activeSlideIndex ?? activeSlideIndex;
-      revealStep = 0;
+      revealStep = message.type === "slide-changed" ? message.revealStep ?? revealStep : 0;
       render();
     }
   });
