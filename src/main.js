@@ -1,4 +1,11 @@
-import { DEFAULT_SOURCE, STORAGE_KEY, loadSource, saveSource } from "./modules/storage.js";
+import {
+  DEFAULT_SOURCE,
+  STORAGE_KEY,
+  clearStoredDocuments,
+  loadSource,
+  removeSource,
+  saveSource,
+} from "./modules/storage.js";
 import { createAppView } from "./modules/views/editor-view.js";
 import { createPresentationView } from "./modules/views/presentation-view.js";
 import { createPresenterView } from "./modules/views/presenter-view.js";
@@ -26,6 +33,12 @@ async function bootstrap() {
   createAppView(app, {
     initialSource: source,
     onSourceChange: (nextSource) => saveSource(STORAGE_KEY, nextSource),
+    onResetDeck: async () => {
+      await removeSource(STORAGE_KEY);
+    },
+    onClearLocalData: async () => {
+      await clearStoredDocuments();
+    },
   });
 }
 

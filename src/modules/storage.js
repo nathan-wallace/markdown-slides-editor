@@ -79,3 +79,21 @@ export async function loadSource(key) {
 
   return withStore("readonly", (store) => store.get(key));
 }
+
+export async function removeSource(key) {
+  if (!hasIndexedDB()) {
+    localStorage.removeItem(key);
+    return;
+  }
+
+  await withStore("readwrite", (store) => store.delete(key));
+}
+
+export async function clearStoredDocuments() {
+  if (!hasIndexedDB()) {
+    localStorage.removeItem(STORAGE_KEY);
+    return;
+  }
+
+  await withStore("readwrite", (store) => store.clear());
+}

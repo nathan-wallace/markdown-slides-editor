@@ -26,7 +26,7 @@ function createIssuesMarkup(issues) {
     .join("");
 }
 
-export function createAppView(root, { initialSource, onSourceChange }) {
+export function createAppView(root, { initialSource, onSourceChange, onResetDeck, onClearLocalData }) {
   let source = initialSource;
   let activeSlideIndex = 0;
   let lastCompiled = null;
@@ -153,6 +153,8 @@ export function createAppView(root, { initialSource, onSourceChange }) {
     <div class="advanced-menu__panel">
       <button type="button" id="advanced-import-source">Import Source</button>
       <button type="button" id="advanced-export-json">Export Deck JSON</button>
+      <button type="button" id="advanced-reset-deck">Reset Local Deck</button>
+      <button type="button" id="advanced-clear-data">Clear Local App Data</button>
     </div>
   `;
 
@@ -169,6 +171,8 @@ export function createAppView(root, { initialSource, onSourceChange }) {
 
   const advancedImportButton = advancedMenu.querySelector("#advanced-import-source");
   const advancedExportJsonButton = advancedMenu.querySelector("#advanced-export-json");
+  const advancedResetDeckButton = advancedMenu.querySelector("#advanced-reset-deck");
+  const advancedClearDataButton = advancedMenu.querySelector("#advanced-clear-data");
 
   const helpDialog = document.createElement("dialog");
   helpDialog.className = "help-dialog";
@@ -390,6 +394,28 @@ export function createAppView(root, { initialSource, onSourceChange }) {
     advancedMenu.hidden = true;
     advancedToggle.setAttribute("aria-expanded", "false");
     importInput.click();
+  });
+
+  advancedResetDeckButton.addEventListener("click", async () => {
+    advancedMenu.hidden = true;
+    advancedToggle.setAttribute("aria-expanded", "false");
+    const confirmed = window.confirm(
+      "Reset the locally saved deck and restore the default starter deck for this browser?",
+    );
+    if (!confirmed) return;
+    await onResetDeck();
+    window.location.reload();
+  });
+
+  advancedClearDataButton.addEventListener("click", async () => {
+    advancedMenu.hidden = true;
+    advancedToggle.setAttribute("aria-expanded", "false");
+    const confirmed = window.confirm(
+      "Clear all locally stored app data for this browser and reload the editor?",
+    );
+    if (!confirmed) return;
+    await onClearLocalData();
+    window.location.reload();
   });
 
   advancedToggle.addEventListener("click", () => {
