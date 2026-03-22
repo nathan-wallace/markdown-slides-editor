@@ -5,6 +5,51 @@ function parseYamlValue(value) {
   return trimmed;
 }
 
+function createTitleSlide(metadata) {
+  if (!metadata.titleSlide) return null;
+
+  return {
+    id: "slide-title",
+    index: 0,
+    raw: "",
+    body: "",
+    notes: "",
+    kind: "title",
+    title: metadata.title?.trim() || "Untitled presentation",
+    subtitle: metadata.subtitle?.trim() || "",
+    date: metadata.date?.trim() || "",
+    location: metadata.location?.trim() || "",
+    speakers: metadata.speakers?.trim() || "",
+    qrUrl:
+      (metadata.titleSlideQr || metadata.titleSlideQrUrl)
+        ? metadata.titleSlideQrUrl?.trim() ||
+          metadata.presentationUrl?.trim() ||
+          metadata.publishedUrl?.trim() ||
+          ""
+        : "",
+  };
+}
+
+function createClosingSlide(metadata) {
+  if (!metadata.closingSlide) return null;
+
+  return {
+    id: "slide-closing",
+    index: 0,
+    raw: "",
+    body: "",
+    notes: "",
+    kind: "closing",
+    title: metadata.closingTitle?.trim() || "Questions?",
+    prompt: metadata.closingPrompt?.trim() || "",
+    contactEmail: metadata.contactEmail?.trim() || "",
+    contactUrl: metadata.contactUrl?.trim() || "",
+    socialLinks: metadata.socialLinks?.trim() || "",
+    presentationUrl:
+      metadata.presentationUrl?.trim() || metadata.publishedUrl?.trim() || "",
+  };
+}
+
 export function parseSource(source) {
   let content = source.trim();
   const metadata = {};
@@ -29,18 +74,55 @@ export function parseSource(source) {
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-  const slides = rawSlides.map((raw, index) => {
-    const noteSplit = raw.split(/\nNote:\s*\n/i);
-    const body = noteSplit[0].trim();
-    const notes = noteSplit.slice(1).join("\nNote:\n").trim();
+  const contentSlides = rawSlides.map((raw, index) => {
+    const sections = {
+      body: [],
+      notes: [],
+      resources: [],
+      script: [],
+    };
+    let activeSection = "body";
+
+    for (const line of raw.split("\n")) {
+      const trimmed = line.trim();
+      if (/^Note:\s*$/i.test(trimmed)) {
+        activeSection = "notes";
+        continue;
+      }
+      if (/^Resources:\s*$/i.test(trimmed)) {
+        activeSection = "resources";
+        continue;
+      }
+      if (/^Script:\s*$/i.test(trimmed)) {
+        activeSection = "script";
+        continue;
+      }
+      sections[activeSection].push(line);
+    }
+
     return {
       id: `slide-${index + 1}`,
       index,
       raw,
-      body,
-      notes,
+      body: sections.body.join("\n").trim(),
+      notes: sections.notes.join("\n").trim(),
+      resources: sections.resources.join("\n").trim(),
+      script: sections.script.join("\n").trim(),
     };
   });
+
+  const slides = [];
+  const titleSlide = createTitleSlide(metadata);
+  if (titleSlide) slides.push(titleSlide);
+  slides.push(...contentSlides.map((slide, index) => ({
+    ...slide,
+    index: slides.length + index,
+  })));
+  const closingSlide = createClosingSlide(metadata);
+  if (closingSlide) {
+    closingSlide.index = slides.length;
+    slides.push(closingSlide);
+  }
 
   return {
     metadata,

@@ -6,12 +6,14 @@ import {
   removeSource,
   saveSource,
 } from "./modules/storage.js";
+import { initColorMode } from "./modules/color-mode.js";
 import { createAppView } from "./modules/views/editor-view.js";
 import { createPresentationView } from "./modules/views/presentation-view.js";
 import { createPresenterView } from "./modules/views/presenter-view.js";
 import { getCurrentRoute, restoreRedirectPath } from "./modules/router.js";
 
 restoreRedirectPath();
+initColorMode();
 
 const app = document.querySelector("#app");
 const route = getCurrentRoute(window.location.pathname);

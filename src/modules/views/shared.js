@@ -1,6 +1,7 @@
 import { parseSource } from "../parser.js";
 import { renderDeck } from "../render.js";
 import { lintDeck } from "../a11y.js";
+import { attachColorModeToggle } from "../color-mode.js";
 import { createRevealState } from "../presentation-state.js";
 
 export function compileSource(source) {
@@ -36,6 +37,32 @@ export function createButton(label, title) {
   return button;
 }
 
+export function addColorModeToggle(actionsNode) {
+  const button = createButton("Dark mode");
+  button.className = "color-mode-toggle";
+  attachColorModeToggle(button);
+  actionsNode.append(button);
+  return button;
+}
+
+export function buildSupplementalHtml(renderedSlide, emptyMessage = "No speaker notes for this slide.") {
+  if (!renderedSlide) return `<p>${emptyMessage}</p>`;
+
+  const sections = [
+    renderedSlide.notesHtml
+      ? `<section class="support-section"><h2>Notes</h2>${renderedSlide.notesHtml}</section>`
+      : "",
+    renderedSlide.resourcesHtml
+      ? `<section class="support-section"><h2>Resources</h2>${renderedSlide.resourcesHtml}</section>`
+      : "",
+    renderedSlide.scriptHtml
+      ? `<section class="support-section"><h2>Script</h2>${renderedSlide.scriptHtml}</section>`
+      : "",
+  ].filter(Boolean);
+
+  return sections.join("") || `<p>${emptyMessage}</p>`;
+}
+
 function escapeAttribute(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 }
@@ -66,9 +93,10 @@ export function mountSlideInto(container, renderedSlide, options = {}) {
 
   const { revealStep = renderedSlide.stepCount || 0, includeLabel = true } = options;
   const title = renderedSlide.headings.find((heading) => heading.level === 1)?.text || "Slide preview";
+  const slideClass = renderedSlide.kind === "title" ? "slide-card slide-card--title" : "slide-card";
 
   container.innerHTML = `
-    <article class="slide-card"${includeLabel ? ` aria-label="${escapeAttribute(title)}"` : ""}>
+    <article class="${slideClass}"${includeLabel ? ` aria-label="${escapeAttribute(title)}"` : ""}>
       <div class="slide-card__content">
         ${renderedSlide.html}
       </div>

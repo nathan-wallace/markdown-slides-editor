@@ -11,24 +11,28 @@ import {
   resizePresenterPanel,
   savePresenterLayout,
 } from "../presenter-layout.js";
+import {
+  adjustPresenterTimerMinutes,
+  createPresenterTimerState,
+  formatPresenterTimerMinutes,
+  getPresenterTimerProgress,
+  getPresenterTimerTone,
+  resetPresenterTimer,
+  setPresenterTimerPaused,
+  tickPresenterTimer,
+} from "../presenter-timer.js";
+import { toggleColorMode } from "../color-mode.js";
 import { applyDeckTheme } from "../theme.js";
-import { compileSource, createButton, createDeckFrame, mountSlideInto } from "./shared.js";
-
-function formatElapsed(startTime) {
-  const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-  const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
-  const seconds = String(elapsedSeconds % 60).padStart(2, "0");
-  return `${minutes}:${seconds}`;
-}
+import { addColorModeToggle, buildSupplementalHtml, compileSource, createButton, createDeckFrame, mountSlideInto } from "./shared.js";
 
 export function createPresenterView(root, initialSource) {
   let source = initialSource;
   let activeSlideIndex = 0;
   let revealStep = 0;
-  const startedAt = Date.now();
   const sync = createSyncChannel();
   const frame = createDeckFrame("Presenter View");
   let panelLayout = loadPresenterLayout();
+  let timerState = createPresenterTimerState(getPresentationDurationMinutes(compileSource(source).metadata));
 
   frame.innerHTML += `
     <main class="presenter-layout presenter-layout--custom" id="presenter-layout-grid">
@@ -67,16 +71,19 @@ export function createPresenterView(root, initialSource) {
           </div>
         </div>
         <div class="presenter-panel__body">
-          <p id="presenter-timer" class="timer">00:00</p>
+          <p id="presenter-timer" class="timer">30 min</p>
           <p id="presenter-remaining" class="meta-text"></p>
           <div class="presenter-timer-controls">
+            <button type="button" id="presenter-minus-minute">-1 min</button>
+            <button type="button" id="presenter-plus-minute">+1 min</button>
+            <button type="button" id="presenter-pause-timer">Pause</button>
             <button type="button" id="presenter-reset-timer">Reset</button>
           </div>
         </div>
       </section>
       <section class="presenter-panel" data-panel-id="notes">
         <div class="presenter-panel__header">
-          <p class="panel__label">Notes</p>
+          <p class="panel__label">Presenter support</p>
           <div class="presenter-panel__controls">
             <button type="button" data-action="shrink" data-panel-id="notes" aria-label="Make notes panel narrower">-</button>
             <button type="button" data-action="grow" data-panel-id="notes" aria-label="Make notes panel wider">+</button>
@@ -103,6 +110,7 @@ export function createPresenterView(root, initialSource) {
         </div>
       </section>
     </main>
+    <div id="presenter-timer-progress" class="presenter-timer-progress" aria-hidden="true"></div>
   `;
 
   root.replaceChildren(frame);
@@ -116,11 +124,14 @@ export function createPresenterView(root, initialSource) {
   const remainingNode = frame.querySelector("#presenter-remaining");
   const outlineNode = frame.querySelector("#presenter-outline");
   const resetTimerButton = frame.querySelector("#presenter-reset-timer");
+  const pauseTimerButton = frame.querySelector("#presenter-pause-timer");
+  const minusMinuteButton = frame.querySelector("#presenter-minus-minute");
+  const plusMinuteButton = frame.querySelector("#presenter-plus-minute");
+  const progressNode = frame.querySelector("#presenter-timer-progress");
   const previousButton = createButton("Previous");
   const nextButton = createButton("Next");
   actions.append(previousButton, nextButton);
-  let timerStart = startedAt;
-  let lastDurationMinutes = 30;
+  addColorModeToggle(actions);
   let compiled = compileSource(source);
 
   function publishState() {
@@ -148,22 +159,28 @@ export function createPresenterView(root, initialSource) {
     applyDeckTheme(compiled.metadata);
     const currentSlide = compiled.renderedSlides[activeSlideIndex] || compiled.renderedSlides[0];
     const nextSlide = compiled.renderedSlides[activeSlideIndex + 1];
-    lastDurationMinutes = getPresentationDurationMinutes(compiled.metadata);
+    const metadataDuration = getPresentationDurationMinutes(compiled.metadata);
+    if (!timerState || timerState.durationMinutes <= 0) {
+      timerState = createPresenterTimerState(metadataDuration);
+    }
     mountSlideInto(currentFrame, currentSlide, { revealStep });
     nextFrame.innerHTML = nextSlide
       ? `<article class="slide-card slide-card--next"><div class="slide-card__content">${nextSlide.html}</div></article>`
       : `<article class="slide-card slide-card--next empty-state"><p>No next slide.</p></article>`;
-    notesNode.innerHTML = currentSlide?.notesHtml || "<p>No speaker notes for this slide.</p>";
+    notesNode.innerHTML = buildSupplementalHtml(currentSlide);
     outlineNode.innerHTML = compiled.renderedSlides
       .map((renderedSlide, index) => {
         const currentClass = index === activeSlideIndex ? ' class="is-current"' : "";
         return `<li${currentClass}><button type="button" data-slide-index="${index}">${getSlideTitle(renderedSlide, index)}</button></li>`;
       })
       .join("");
-
-    const elapsedSeconds = Math.floor((Date.now() - timerStart) / 1000);
-    const remainingSeconds = Math.max(0, lastDurationMinutes * 60 - elapsedSeconds);
-    remainingNode.textContent = `Remaining ${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(remainingSeconds % 60).padStart(2, "0")}`;
+    const timerTone = getPresenterTimerTone(timerState);
+    timerNode.textContent = formatPresenterTimerMinutes(timerState.remainingMs);
+    timerNode.dataset.tone = timerTone;
+    remainingNode.textContent = `${timerState.paused ? "Paused" : "Time left"} · ${Math.ceil(timerState.remainingMs / 60000)} min of ${timerState.durationMinutes}`;
+    pauseTimerButton.textContent = timerState.paused ? "Resume" : "Pause";
+    progressNode.style.setProperty("--timer-progress", `${getPresenterTimerProgress(timerState) * 100}%`);
+    progressNode.dataset.tone = timerTone;
     applyLayout();
   }
 
@@ -243,22 +260,38 @@ export function createPresenterView(root, initialSource) {
       event.preventDefault();
       move(-1);
     }
+
+    if (event.key.toLowerCase() === "d") {
+      event.preventDefault();
+      toggleColorMode();
+    }
   });
 
   window.setInterval(() => {
-    timerNode.textContent = formatElapsed(timerStart);
-    const elapsedSeconds = Math.floor((Date.now() - timerStart) / 1000);
-    const remainingSeconds = Math.max(0, lastDurationMinutes * 60 - elapsedSeconds);
-    remainingNode.textContent = `Remaining ${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(remainingSeconds % 60).padStart(2, "0")}`;
+    timerState = tickPresenterTimer(timerState, Date.now());
+    render();
   }, 1000);
 
-  resetTimerButton.addEventListener("click", () => {
-    timerStart = Date.now();
-    timerNode.textContent = formatElapsed(timerStart);
+  minusMinuteButton.addEventListener("click", () => {
+    timerState = adjustPresenterTimerMinutes(timerState, -1);
     render();
   });
 
-  timerNode.textContent = formatElapsed(timerStart);
+  plusMinuteButton.addEventListener("click", () => {
+    timerState = adjustPresenterTimerMinutes(timerState, 1);
+    render();
+  });
+
+  pauseTimerButton.addEventListener("click", () => {
+    timerState = setPresenterTimerPaused(timerState, !timerState.paused, Date.now());
+    render();
+  });
+
+  resetTimerButton.addEventListener("click", () => {
+    timerState = resetPresenterTimer(timerState, getPresentationDurationMinutes(compiled.metadata), Date.now());
+    render();
+  });
+
   render();
   publishState();
 }

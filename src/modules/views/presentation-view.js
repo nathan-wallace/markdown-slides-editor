@@ -4,6 +4,7 @@ import {
   getPreviousPosition,
   getSlideTitle,
 } from "../presentation-state.js";
+import { toggleColorMode } from "../color-mode.js";
 import { applyDeckTheme } from "../theme.js";
 import { compileSource, mountSlideInto } from "./shared.js";
 
@@ -118,6 +119,11 @@ export function createPresentationView(root, initialSource) {
     if (event.key.toLowerCase() === "c") {
       event.preventDefault();
       toggleOutline();
+    }
+
+    if (event.key.toLowerCase() === "d") {
+      event.preventDefault();
+      toggleColorMode();
     }
   });
 

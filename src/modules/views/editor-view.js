@@ -1,39 +1,21 @@
 import { buildExportBundle, buildSnapshotHtml, downloadFile } from "../export.js";
-import { runSa11y } from "../sa11y.js";
 import { updateFrontMatterValue, removeFrontMatterValue } from "../source-format.js";
 import { createSyncChannel } from "../sync.js";
 import { getSlideTitle } from "../presentation-state.js";
 import { applyDeckTheme, BUILT_IN_THEMES } from "../theme.js";
-import { compileSource, createButton, createDeckFrame, mountSlideInto } from "./shared.js";
+import { addColorModeToggle, buildSupplementalHtml, compileSource, createButton, createDeckFrame, mountSlideInto } from "./shared.js";
 
 async function readCss() {
   const response = await fetch(new URL("../../styles/app.css", import.meta.url));
   return response.text();
 }
 
-function createIssuesMarkup(issues) {
-  if (issues.length === 0) {
-    return `<li class="issue issue--ok">No accessibility issues detected.</li>`;
-  }
-
-  return issues
-    .map(
-      (issue) => `<li class="issue issue--${issue.level}">
-        <strong>${issue.level.toUpperCase()}</strong>
-        <span>${issue.message}</span>
-      </li>`,
-    )
-    .join("");
-}
-
 export function createAppView(root, { initialSource, onSourceChange, onResetDeck, onClearLocalData }) {
   let source = initialSource;
   let activeSlideIndex = 0;
   let lastCompiled = null;
-  let sa11yRunToken = 0;
   let editorCollapsed = false;
   let outlineCollapsed = false;
-  let lintCollapsed = true;
   const sync = createSyncChannel();
   const frame = createDeckFrame("Editor");
 
@@ -78,34 +60,11 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
           </aside>
         </div>
         <aside class="notes-panel">
-          <p class="panel__label">Speaker notes</p>
+          <p class="panel__label">Presenter support</p>
           <div id="notes-preview" class="notes-content"></div>
         </aside>
       </section>
     </main>
-    <section class="lint-panel" data-collapsed="true">
-      <div class="lint-panel__header">
-        <div>
-          <p class="panel__label">Accessibility check</p>
-          <p class="meta-text">Editor linting for slide structure, links, image alt text, and note coverage.</p>
-        </div>
-        <div class="lint-panel__actions">
-          <button type="button" id="toggle-lint-panel">Expand Accessibility</button>
-          <button type="button" id="run-a11y-check">Run Accessibility Check</button>
-        </div>
-        <ul id="lint-summary" class="lint-summary"></ul>
-      </div>
-      <div class="lint-panel__body">
-        <div class="resource-links" aria-label="Accessibility resources">
-          <a href="https://intopia.digital/articles/how-to-create-more-accessible-presentations/" target="_blank" rel="noreferrer">Intopia presentation guidance</a>
-          <a href="https://inklusiv.ca/" target="_blank" rel="noreferrer">Inklusiv</a>
-          <a href="https://www.w3.org/WAI/presentations/" target="_blank" rel="noreferrer">WAI presentations</a>
-          <a href="https://sa11y.netlify.app/bookmarklet/" target="_blank" rel="noreferrer">Sa11y bookmarklet</a>
-        </div>
-        <p id="sa11y-status" class="meta-text"></p>
-        <ul id="lint-issues" class="issues-list"></ul>
-      </div>
-    </section>
   `;
 
   root.replaceChildren(frame);
@@ -114,22 +73,16 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
   const editor = frame.querySelector("#source-editor");
   const previewFrame = frame.querySelector("#preview-frame");
   const notesPreview = frame.querySelector("#notes-preview");
-  const lintIssues = frame.querySelector("#lint-issues");
-  const lintSummary = frame.querySelector("#lint-summary");
   const deckMeta = frame.querySelector("#deck-meta");
-  const runA11yCheckButton = frame.querySelector("#run-a11y-check");
-  const sa11yStatus = frame.querySelector("#sa11y-status");
   const outlineNode = frame.querySelector("#slide-outline");
   const themeSelect = frame.querySelector("#theme-select");
   const themeStylesheetInput = frame.querySelector("#theme-stylesheet-input");
   const editorLayout = frame.querySelector(".editor-layout");
   const previewLayout = frame.querySelector(".preview-layout");
   const outlinePanel = frame.querySelector(".outline-panel");
-  const lintPanel = frame.querySelector(".lint-panel");
   const toggleEditorPanelButton = frame.querySelector("#toggle-editor-panel");
   const toggleOutlinePanelButton = frame.querySelector("#toggle-outline-panel");
   const toggleOutlinePanelHeaderButton = frame.querySelector("#toggle-outline-panel-header");
-  const toggleLintPanelButton = frame.querySelector("#toggle-lint-panel");
 
   const importInput = document.createElement("input");
   importInput.type = "file";
@@ -166,6 +119,7 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     advancedMenu,
     importInput,
   );
+  addColorModeToggle(actions);
 
   const advancedImportButton = advancedMenu.querySelector("#advanced-import-source");
   const advancedExportJsonButton = advancedMenu.querySelector("#advanced-export-json");
@@ -205,42 +159,14 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     render();
   }
 
-  function updateSummary(issues) {
-    const counts = { error: 0, warning: 0, info: 0 };
-    for (const issue of issues) {
-      counts[issue.level] += 1;
-    }
-
-    lintSummary.innerHTML = `
-      <li>${counts.error} errors</li>
-      <li>${counts.warning} warnings</li>
-      <li>${counts.info} info</li>
-    `;
-  }
-
   function applyPanelState() {
     editorLayout.dataset.editorCollapsed = String(editorCollapsed);
     previewLayout.dataset.outlineCollapsed = String(outlineCollapsed);
     outlinePanel.dataset.collapsed = String(outlineCollapsed);
-    lintPanel.dataset.collapsed = String(lintCollapsed);
     outlinePanel.hidden = outlineCollapsed;
     toggleEditorPanelButton.textContent = editorCollapsed ? "Expand Editor" : "Minimize Editor";
     toggleOutlinePanelButton.textContent = outlineCollapsed ? "Show Outline" : "Hide Outline";
     toggleOutlinePanelHeaderButton.textContent = outlineCollapsed ? "Show Outline" : "Hide Outline";
-    toggleLintPanelButton.textContent = lintCollapsed ? "Expand Accessibility" : "Collapse Accessibility";
-  }
-
-  async function refreshSa11y() {
-    const runToken = ++sa11yRunToken;
-    sa11yStatus.textContent = "Sa11y is enabled for the current slide preview.";
-    try {
-      await runSa11y("#preview-frame");
-      if (runToken !== sa11yRunToken) return;
-      sa11yStatus.textContent = "Sa11y is enabled for the current slide preview.";
-    } catch (error) {
-      if (runToken !== sa11yRunToken) return;
-      sa11yStatus.textContent = `Sa11y could not be loaded here. You can still use the Sa11y bookmarklet or site directly. ${error.message}`;
-    }
   }
 
   function publishState(compiled) {
@@ -261,16 +187,13 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     themeSelect.value = compiled.metadata.theme || "default-high-contrast";
     themeStylesheetInput.value = compiled.metadata.themeStylesheet || "";
     mountSlideInto(previewFrame, slide);
-    notesPreview.innerHTML = slide?.notesHtml || "<p>No speaker notes for this slide.</p>";
+    notesPreview.innerHTML = buildSupplementalHtml(slide);
     outlineNode.innerHTML = compiled.renderedSlides
       .map((renderedSlide, index) => {
         const currentClass = index === activeSlideIndex ? ' class="is-current"' : "";
         return `<li${currentClass}><button type="button" data-slide-index="${index}">${getSlideTitle(renderedSlide, index)}</button></li>`;
       })
       .join("");
-    lintIssues.innerHTML = createIssuesMarkup(compiled.issues);
-    updateSummary(compiled.issues);
-    void refreshSa11y();
   }
 
   function render() {
@@ -313,11 +236,6 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
 
   toggleOutlinePanelHeaderButton.addEventListener("click", () => {
     outlineCollapsed = !outlineCollapsed;
-    applyPanelState();
-  });
-
-  toggleLintPanelButton.addEventListener("click", () => {
-    lintCollapsed = !lintCollapsed;
     applyPanelState();
   });
 
@@ -435,12 +353,6 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     editor.value = source;
     onSourceChange(source);
     render();
-  });
-
-  runA11yCheckButton.addEventListener("click", () => {
-    lastCompiled = compileSource(source);
-    lintIssues.innerHTML = createIssuesMarkup(lastCompiled.issues);
-    updateSummary(lastCompiled.issues);
   });
 
   document.addEventListener("click", (event) => {
