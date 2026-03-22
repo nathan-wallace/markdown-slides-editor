@@ -1,4 +1,4 @@
-import { buildSnapshotHtml, downloadFile } from "../export.js";
+import { buildExportBundle, buildSnapshotHtml, downloadFile } from "../export.js";
 import { runSa11y } from "../sa11y.js";
 import { updateFrontMatterValue, removeFrontMatterValue } from "../source-format.js";
 import { createSyncChannel } from "../sync.js";
@@ -139,9 +139,8 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
   const presentButton = createButton("Audience View");
   const presenterButton = createButton("Presenter View");
   const helpButton = createButton("Help");
-  const exportSourceButton = createButton("Export Markdown");
+  const exportBundleButton = createButton("Export");
   const exportJsonButton = createButton("Export Deck JSON");
-  const exportSnapshotButton = createButton("Export Presentation HTML");
   const advancedToggle = createButton("Advanced");
   advancedToggle.setAttribute("aria-haspopup", "true");
   advancedToggle.setAttribute("aria-expanded", "false");
@@ -162,8 +161,7 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     presentButton,
     presenterButton,
     helpButton,
-    exportSourceButton,
-    exportSnapshotButton,
+    exportBundleButton,
     advancedToggle,
     advancedMenu,
     importInput,
@@ -188,8 +186,8 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
       <div class="help-dialog__content">
         <p>This editor is local-first. Your deck is automatically saved in this browser on this device as you work.</p>
         <p>That means your work is not saved to a Google-style cloud account by default. If you switch browsers, clear browser storage, or move to another device, your local saved deck will not come with you unless you export it.</p>
-        <p>Use <strong>Export Markdown</strong> to save your deck for future editing. Use <strong>Export Presentation HTML</strong> to save a portable presentation for sharing or presenting offline.</p>
-        <p>Use <strong>Import Source</strong> to reopen a previously exported Markdown or JSON deck in this editor. Lower-frequency tools such as import and JSON export are grouped under <strong>Advanced</strong>.</p>
+        <p>Use <strong>Export</strong> to download a ZIP that contains both your editable Markdown deck and a portable HTML presentation. Use <strong>Import Source</strong> to reopen a previously exported Markdown or JSON deck in this editor.</p>
+        <p>Lower-frequency tools such as import and JSON export are grouped under <strong>Advanced</strong>.</p>
         <p>Audience View opens the presentation view. Presenter View opens notes, timing, and next-slide support in a second window.</p>
       </div>
     </form>
@@ -353,10 +351,6 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     helpDialog.showModal();
   });
 
-  exportSourceButton.addEventListener("click", () => {
-    downloadFile("deck.md", source, "text/markdown;charset=utf-8");
-  });
-
   exportJsonButton.addEventListener("click", () => {
     downloadFile(
       "deck.json",
@@ -378,7 +372,7 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     exportJsonButton.click();
   });
 
-  exportSnapshotButton.addEventListener("click", async () => {
+  exportBundleButton.addEventListener("click", async () => {
     const cssText = await readCss();
     const html = buildSnapshotHtml({
       title: lastCompiled?.metadata.title || "Slide deck snapshot",
@@ -387,7 +381,11 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
       metadata: lastCompiled?.metadata || {},
       source,
     });
-    downloadFile("deck-snapshot.html", html, "text/html;charset=utf-8");
+    const bundle = buildExportBundle({
+      markdownSource: source,
+      snapshotHtml: html,
+    });
+    downloadFile("deck-export.zip", bundle, "application/zip");
   });
 
   advancedImportButton.addEventListener("click", () => {

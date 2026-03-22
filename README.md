@@ -16,7 +16,7 @@ This is intended for real production presentations. It is not a training product
 - Slide outline and presenter timing support
 - Progressive disclosure for lists
 - IndexedDB-backed local storage
-- Source import and export for Markdown and JSON
+- Source import plus bundled ZIP export for Markdown and presentation HTML
 - Self-contained HTML snapshot export
 - Built-in theme presets plus optional external CSS override
 - Built-in accessibility linting for headings, links, image alt text, and notes
@@ -126,6 +126,15 @@ Speaker notes go here.
 ```
 
 Use `- [>]` inside a list item to mark content for progressive disclosure in audience and snapshot presentation modes.
+
+## Export
+
+The primary export action downloads a ZIP bundle containing:
+
+- `deck.md` for future editing
+- `presentation.html` for presenting or sharing
+
+`Export Deck JSON` remains available in the Advanced menu for machine-readable workflows.
 
 ## Theming
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildSnapshotHtml } from "../src/modules/export.js";
+import { buildExportBundle, buildSnapshotHtml } from "../src/modules/export.js";
 import { buildThemeLinkTag } from "../src/modules/theme.js";
 
 test("buildThemeLinkTag includes an external stylesheet only when configured", () => {
@@ -46,4 +46,17 @@ test("buildSnapshotHtml escapes closing script tags inside embedded source", () 
 
   assert.equal(html.includes("</script><script>alert"), false);
   assert.equal(html.includes("<\\/script><script>alert"), true);
+});
+
+test("buildExportBundle includes markdown and html files in the zip payload", () => {
+  const bundle = buildExportBundle({
+    markdownSource: "# Deck",
+    snapshotHtml: "<!doctype html><html><body>Deck</body></html>",
+  });
+
+  const text = new TextDecoder().decode(bundle);
+  assert.equal(text.includes("deck.md"), true);
+  assert.equal(text.includes("presentation.html"), true);
+  assert.equal(bundle[0], 0x50);
+  assert.equal(bundle[1], 0x4b);
 });
