@@ -331,7 +331,7 @@ export function createAppView(root, { initialSource, onSourceChange, onResetDeck
     outlineNode.innerHTML = compiled.renderedSlides
       .map((renderedSlide, index) => {
         const currentClass = index === activeSlideIndex ? ' class="is-current"' : "";
-        const density = assessSlideDensity(compiled.deck.slides[index]);
+        const density = assessSlideDensity(compiled.slides?.[index]);
         const densityBadge = density.level === "comfortable"
           ? ""
           : `<span class="outline-density outline-density--${density.level}" aria-hidden="true">${density.label}</span>`;
