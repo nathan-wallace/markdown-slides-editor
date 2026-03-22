@@ -20,9 +20,10 @@ This is intended for real production presentations. It is not a training product
 - Better small-screen support for editor and audience view
 - IndexedDB-backed local storage
 - In-editor AI prompt generator for briefing Ollama or another LLM
-- Source import plus bundled ZIP export for Markdown and presentation HTML
+- Source import plus bundled ZIP export for Markdown, JSON, HTML, ODP, and MHTML
 - Portable HTML snapshot export
 - Print / Save PDF workflow with print-friendly slide pages
+- Optional caption/transcript support from local `whisper.cpp` or a configured transcript service
 - Built-in theme presets plus optional external CSS override
 - Accessible light/dark mode that respects system preference and supports manual override
 - Presenter panel layout controls and countdown timer
@@ -37,12 +38,17 @@ npm test
 python3 -m http.server 4173
 ```
 
-Then open `http://localhost:4173`.
+Then open:
+
+- `http://localhost:4173/`
+- `http://localhost:4173/present/`
+- `http://localhost:4173/presenter/`
 
 ## Project docs
 
 - `ACCESSIBILITY.md`: accessibility posture, validation expectations, and contributor guidance
 - `AGENTS.md`: repository instructions for coding agents and automation tools
+- `LICENSE`: AGPLv3 license for the project
 - `STYLES.md`: writing, design, and styling standards for the app and repository docs
 - `.github/copilot-instructions.md`: onboarding notes for GitHub Copilot coding agent
 - `TODO.md`: future roadmap and integration ideas
@@ -68,13 +74,15 @@ Disclosure of AI use is important to this project.
 
 ### AI used when running the program
 
-- No AI is required to run the program today.
-- The current application runs as a static browser app with no built-in runtime dependency on an LLM or remote AI service.
+- No AI is required to run the program by default.
+- The current application runs as a static browser app with no required runtime dependency on an LLM or remote AI service.
+- Optional speech-to-text can be enabled for presentations when a local `whisper.cpp` process or a compatible transcript service is available.
 
 ### Browser-based AI in the current application
 
 - Browser-based AI is not currently enabled in this application.
 - No part of the current shipped editor or presentation runtime executes an in-browser LLM.
+- Caption UI stays hidden unless a transcript source is actually available.
 
 ### Planned AI direction
 
@@ -96,6 +104,7 @@ The repository includes `404.html` so GitHub Pages can redirect deep links back 
 - `src/modules/parser.js` parses front matter, slides, and presenter support sections
 - `src/modules/markdown.js` renders the current supported Markdown subset
 - `src/modules/a11y.js` contains accessibility lint rules
+- `src/modules/captions.js` handles caption-source detection, transcript parsing, and transcript polling
 - `src/modules/export.js` generates the standalone snapshot HTML
 - `src/modules/presentation-state.js` manages reveal-step navigation and duration metadata
 - `src/modules/presenter-timer.js` manages presenter countdown timer state
@@ -128,6 +137,8 @@ durationMinutes: 20
 slideWidth: 1280
 slideHeight: 720
 themeStylesheet: https://example.com/presentation-theme.css
+captionsProvider: whisper.cpp
+captionsSource: http://localhost:4173/whisper-demo/transcript.json
 titleSlide: true
 subtitle: A better slide workflow
 date: 2026-03-22
@@ -179,6 +190,52 @@ Inside a slide, you can also add optional `Resources:` and `Script:` sections af
 The editor warns when a slide looks too dense for the target presentation frame, and the slide body text will shrink before the heading does to help keep content on-screen without scrolling.
 
 The editor also supports layout directives such as `::center`, `::column-left`, `::column-right`, `::media-left`, `::media-right`, `::callout`, and `::quote`. See `docs/layout-syntax.md` for examples.
+
+## Optional captions
+
+Live captions are optional and remain hidden unless a transcript source is actually available.
+
+Two supported paths:
+
+- local `whisper.cpp`, typically writing `whisper-demo/transcript.json`
+- a compatible service endpoint exposed through `captionsSource`
+
+Expected transcript shape:
+
+```json
+{
+  "active": true,
+  "generated": "2026-03-22T16:00:00Z",
+  "text": "Current live transcript text"
+}
+```
+
+If you run the app on `localhost`, it automatically checks `./whisper-demo/transcript.json` and only shows caption UI when that file becomes available.
+
+For explicit configuration, use front matter such as:
+
+```md
+---
+captionsProvider: whisper.cpp
+captionsSource: http://localhost:4173/whisper-demo/transcript.json
+---
+```
+
+or:
+
+```md
+---
+captionsProvider: service
+captionsSource: https://captions.example.com/presentation/transcript.json
+---
+```
+
+Local helper scripts:
+
+- `npm run dev:whisper` starts a `whisper.cpp` `whisper-stream` process and writes `whisper-demo/transcript.json`
+- `npm run dev:transcript -- --src ./some-transcript.txt` mirrors a text or JSON file into the same transcript format for testing
+
+This follows the same local-first pattern used in `whisper-slides`: the deck stays static, while a local or service-backed transcript source is polled only when available.
 
 ## Export
 

@@ -21,6 +21,7 @@ import {
   setPresenterTimerPaused,
   tickPresenterTimer,
 } from "../presenter-timer.js";
+import { createCaptionMonitor, getCaptionConfig } from "../captions.js";
 import { toggleColorMode } from "../color-mode.js";
 import { applyDeckTheme } from "../theme.js";
 import { addColorModeToggle, buildSupplementalHtml, compileSource, createButton, createDeckFrame, mountSlideInto } from "./shared.js";
@@ -33,7 +34,22 @@ export function createPresenterView(root, initialSource) {
   const sync = createSyncChannel();
   const frame = createDeckFrame("Presenter View");
   let panelLayout = loadPresenterLayout();
-  let timerState = createPresenterTimerState(getPresentationDurationMinutes(compileSource(source).metadata));
+  let compiled = compileSource(source);
+  let timerState = createPresenterTimerState(getPresentationDurationMinutes(compiled.metadata));
+  let captionsState = {
+    enabled: false,
+    available: false,
+    active: false,
+    text: "",
+    generated: "",
+    provider: "none",
+    source: "",
+  };
+  let captionConfig = getCaptionConfig(compiled.metadata);
+  const captionMonitor = createCaptionMonitor(captionConfig, (state) => {
+    captionsState = state;
+    render();
+  });
 
   frame.innerHTML += `
     <main class="presenter-layout presenter-layout--custom" id="presenter-layout-grid">
@@ -96,6 +112,21 @@ export function createPresenterView(root, initialSource) {
           <div id="presenter-notes" class="notes-content"></div>
         </div>
       </section>
+      <section class="presenter-panel" data-panel-id="captions" hidden>
+        <div class="presenter-panel__header">
+          <p class="panel__label">Captions</p>
+          <div class="presenter-panel__controls">
+            <button type="button" data-action="shrink" data-panel-id="captions" aria-label="Make captions panel narrower">-</button>
+            <button type="button" data-action="grow" data-panel-id="captions" aria-label="Make captions panel wider">+</button>
+            <button type="button" data-action="left" data-panel-id="captions" aria-label="Move captions panel left">←</button>
+            <button type="button" data-action="right" data-panel-id="captions" aria-label="Move captions panel right">→</button>
+          </div>
+        </div>
+        <div class="presenter-panel__body">
+          <p id="presenter-captions-status" class="meta-text"></p>
+          <div id="presenter-captions" class="notes-content captions-transcript"></div>
+        </div>
+      </section>
       <section class="presenter-panel" data-panel-id="outline">
         <div class="presenter-panel__header">
           <p class="panel__label">Outline</p>
@@ -121,6 +152,9 @@ export function createPresenterView(root, initialSource) {
   const currentFrame = frame.querySelector("#presenter-current");
   const nextFrame = frame.querySelector("#presenter-next");
   const notesNode = frame.querySelector("#presenter-notes");
+  const captionsPanel = frame.querySelector('[data-panel-id="captions"]');
+  const captionsStatusNode = frame.querySelector("#presenter-captions-status");
+  const captionsNode = frame.querySelector("#presenter-captions");
   const timerNode = frame.querySelector("#presenter-timer");
   const remainingNode = frame.querySelector("#presenter-remaining");
   const outlineNode = frame.querySelector("#presenter-outline");
@@ -136,7 +170,6 @@ export function createPresenterView(root, initialSource) {
   const zoomInButton = createButton("A+", "Make slide text larger in presenter and audience views");
   actions.append(previousButton, nextButton, zoomOutButton, zoomResetButton, zoomInButton);
   addColorModeToggle(actions);
-  let compiled = compileSource(source);
 
   function publishState() {
     sync.postMessage({
@@ -162,6 +195,9 @@ export function createPresenterView(root, initialSource) {
   function render() {
     compiled = compileSource(source);
     applyDeckTheme(compiled.metadata);
+    const nextCaptionConfig = getCaptionConfig(compiled.metadata);
+    captionMonitor.update(nextCaptionConfig);
+    captionConfig = nextCaptionConfig;
     const currentSlide = compiled.renderedSlides[activeSlideIndex] || compiled.renderedSlides[0];
     const nextSlide = compiled.renderedSlides[activeSlideIndex + 1];
     const metadataDuration = getPresentationDurationMinutes(compiled.metadata);
@@ -175,6 +211,11 @@ export function createPresenterView(root, initialSource) {
       : `<article class="slide-card slide-card--next empty-state"><p>No next slide.</p></article>`;
     nextFrame.style.setProperty("--presentation-text-zoom", String(textZoom));
     notesNode.innerHTML = buildSupplementalHtml(currentSlide);
+    captionsPanel.hidden = !captionsState.available;
+    captionsStatusNode.textContent = captionsState.available
+      ? `${captionsState.provider === "whisper.cpp" ? "whisper.cpp" : "Caption source"} · ${captionsState.active ? "live" : "connected"}`
+      : "";
+    captionsNode.textContent = captionsState.text || "Caption source is available and waiting for speech.";
     outlineNode.innerHTML = compiled.renderedSlides
       .map((renderedSlide, index) => {
         const currentClass = index === activeSlideIndex ? ' class="is-current"' : "";
@@ -334,4 +375,5 @@ export function createPresenterView(root, initialSource) {
 
   render();
   publishState();
+  captionMonitor.start();
 }

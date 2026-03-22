@@ -1,4 +1,5 @@
 import { createSyncChannel } from "../sync.js";
+import { createCaptionMonitor, getCaptionConfig } from "../captions.js";
 import {
   getNextPosition,
   getPreviousPosition,
@@ -15,6 +16,20 @@ export function createPresentationView(root, initialSource) {
   let textZoom = 1;
   let compiled = compileSource(source);
   const sync = createSyncChannel();
+  let captionsState = {
+    enabled: false,
+    available: false,
+    active: false,
+    text: "",
+    generated: "",
+    provider: "none",
+    source: "",
+  };
+  let captionConfig = getCaptionConfig(compiled.metadata);
+  const captionMonitor = createCaptionMonitor(captionConfig, (state) => {
+    captionsState = state;
+    render();
+  });
   let tocOpen = false;
   const frame = document.createElement("div");
   frame.className = "audience-shell";
@@ -32,6 +47,7 @@ export function createPresentationView(root, initialSource) {
         </form>
       </dialog>
       <div id="presentation-frame" class="presentation-frame"></div>
+      <div id="live-caption-display" class="live-caption-display" aria-live="polite" aria-atomic="false" hidden></div>
     </main>
   `;
 
@@ -41,10 +57,14 @@ export function createPresentationView(root, initialSource) {
   const statusNode = frame.querySelector("#presentation-status");
   const tocNode = frame.querySelector("#presentation-toc");
   const outlineNode = frame.querySelector("#presentation-outline");
+  const captionNode = frame.querySelector("#live-caption-display");
 
   function render() {
     compiled = compileSource(source);
     applyDeckTheme(compiled.metadata);
+    const nextCaptionConfig = getCaptionConfig(compiled.metadata);
+    captionMonitor.update(nextCaptionConfig);
+    captionConfig = nextCaptionConfig;
     const slide = compiled.renderedSlides[activeSlideIndex] || compiled.renderedSlides[0];
     activeSlideIndex = slide?.index || 0;
     mountSlideInto(frameNode, slide, { revealStep });
@@ -58,6 +78,8 @@ export function createPresentationView(root, initialSource) {
         return `<li${currentClass}><button type="button" data-slide-index="${index}">${getSlideTitle(renderedSlide, index)}</button></li>`;
       })
       .join("");
+    captionNode.hidden = !captionsState.available || !captionsState.text;
+    captionNode.textContent = captionsState.text;
     sync.postMessage({ type: "slide-changed", activeSlideIndex, revealStep, source, textZoom, timestamp: Date.now() });
   }
 
@@ -142,4 +164,5 @@ export function createPresentationView(root, initialSource) {
   });
 
   render();
+  captionMonitor.start();
 }

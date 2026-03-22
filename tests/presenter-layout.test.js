@@ -30,6 +30,7 @@ test("normalizePresenterPanels restores missing panels and clamps spans", () => 
   assert.equal(normalized.length, DEFAULT_PRESENTER_PANELS.length);
   assert.equal(normalized.find((panel) => panel.id === "current").span, 12);
   assert.equal(normalized.some((panel) => panel.id === "notes"), true);
+  assert.equal(normalized.some((panel) => panel.id === "captions"), true);
 });
 
 test("resizePresenterPanel changes only the targeted panel span", () => {
@@ -49,7 +50,7 @@ test("savePresenterLayout and loadPresenterLayout round-trip through storage", (
   const layout = movePresenterPanel(DEFAULT_PRESENTER_PANELS, "outline", -1);
   savePresenterLayout(layout, storage);
   const loaded = loadPresenterLayout(storage);
-  assert.equal(loaded[3].id, "outline");
+  assert.equal(loaded[4].id, "outline");
 });
 
 test("loadPresenterLayout falls back to defaults for invalid JSON", () => {

@@ -31,10 +31,10 @@
 - Always run `npm test` before finishing a change.
 - If you touch presentation behavior, also run the local static server and manually verify:
   - `/` editor
-  - `/present` audience view
-  - `/presenter` presenter view
-- If you touch export, verify that `Export Snapshot` still produces a standalone HTML file.
-- If you touch accessibility rules or rendering, manually exercise the built-in accessibility check and compare against `docs/accessibility-checklist.md`.
+  - `/present/` audience view
+  - `/presenter/` presenter view
+- If you touch export, verify that the main `Export` ZIP still contains the expected bundle files.
+- If you touch accessibility rules or rendering, compare behavior against `docs/accessibility-checklist.md` and `docs/manual-a11y-testing.md`.
 
 ## Project Layout
 
@@ -42,10 +42,13 @@
   - `index.html`: SPA shell that loads `src/main.js`
   - `404.html`: GitHub Pages redirect helper for deep-link routes
   - `README.md`: human-oriented project summary and local run instructions
+  - `LICENSE`: AGPLv3 license text
   - `TODO.md`: future roadmap ideas, especially `whisper-slides`, W3C accessibility patterns, and optional AI/Whisper support
-  - `package.json`: minimal scripts; currently only `test` and `serve`
+  - `package.json`: minimal scripts for testing, local serving, and optional Whisper helpers
 - Documentation:
   - `docs/accessibility-checklist.md`: required accessibility targets for slide structure, links, media, motion, keyboard support, and validation
+  - `docs/editor-vision.md`: longer-term product direction for the editor and runtime
+  - `docs/manual-a11y-testing.md`: Sa11y-assisted and manual accessibility workflow
   - `docs/resources.md`: project reference position on Intopia, Inklusiv, WCAG, and APG usage
 - App entry:
   - `src/main.js`: loads stored source, resolves route, and mounts editor, audience, or presenter views
@@ -53,20 +56,27 @@
   - `src/modules/parser.js`: front matter parsing, slide splitting on `---`, and speaker note extraction using `Note:`
   - `src/modules/markdown.js`: lightweight Markdown-to-HTML renderer
   - `src/modules/render.js`: applies Markdown rendering to each parsed slide
-  - `src/modules/a11y.js`: current deck linting for H1 count, heading skips, generic links, missing alt text, and note presence
-- `src/modules/storage.js`: IndexedDB-first persistence plus fallback to `localStorage`
+  - `src/modules/a11y.js`: current deck linting for H1 count, heading skips, generic links, missing alt text, note presence, and slide-density assessment
+  - `src/modules/ai-prompt.js`: generates structured AI briefing prompts from deck content
+  - `src/modules/captions.js`: caption-source capability detection, transcript parsing, and transcript polling helpers
+  - `src/modules/storage.js`: IndexedDB-first persistence plus fallback to `localStorage`
   - `src/modules/router.js`: route detection and GitHub Pages redirect restoration
   - `src/modules/sync.js`: `BroadcastChannel` presenter/editor sync with a `localStorage` fallback
-  - `src/modules/export.js`: source download helpers and standalone snapshot HTML generation
+  - `src/modules/export.js`: bundle export helpers plus standalone HTML, ODP, and one-page MHTML generation
+  - `src/modules/slide-layout.js`: slide-size normalization and body-text fitting
 - Views:
-  - `src/modules/views/editor-view.js`: split-pane editor, preview, notes, import/export, route launchers, and accessibility check UI
+  - `src/modules/views/editor-view.js`: split-pane editor, preview, notes, AI prompt modal, one-page view, import/export, and route launchers
   - `src/modules/views/presentation-view.js`: audience presentation shell and keyboard navigation
-  - `src/modules/views/presenter-view.js`: current slide, next slide, notes, and timer
+  - `src/modules/views/presenter-view.js`: current slide, next slide, notes, timer, panel layout controls, and shared zoom controls
   - `src/modules/views/shared.js`: compile pipeline and shared rendering helpers
 - Styling:
   - `styles/app.css`: full visual system and responsive layout
 - Tests:
-  - `tests/parser.test.js`: parser and accessibility-lint smoke tests
+  - `tests/parser.test.js`: parser and rendering coverage
+  - `tests/export.test.js`: bundle and export format coverage
+  - `tests/a11y.test.js`: density and lint-threshold coverage
+  - `tests/ai-prompt.test.js`: AI prompt generation coverage
+  - `tests/slide-layout.test.js`: slide-dimension and fitting coverage
 
 ## Architecture Notes
 
@@ -74,6 +84,7 @@
 - There is no external Markdown library yet; the current Markdown renderer is intentionally small and only supports the syntax implemented in `src/modules/markdown.js`.
 - The current runtime is an in-repo placeholder. Planned `whisper-slides` alignment is tracked in `TODO.md`.
 - Whisper or other AI features must remain optional and should only surface in the UI when an actual AI capability is available.
+- Do not show speech-to-text status, buttons, transcript placeholders, or related help text when the transcript source is unavailable.
 - Keep the static baseline honest: GitHub Pages mode must work without server code, local binaries, or secret keys.
 - When adding offline-friendly behavior, prefer existing browser primitives such as IndexedDB, `localStorage`, and cache-aware static asset loading before inventing new infrastructure.
 
@@ -90,6 +101,9 @@
   - front matter at the top
   - `---` for slide boundaries
   - `Note:` for speaker notes
+  - `Resources:` for slide-linked references
+  - `Script:` for fuller speaker script content
+- Optional caption settings should live in front matter, for example `captionsProvider` and `captionsSource`, and must degrade cleanly when the source is unavailable.
 - Preserve and extend local browser caching carefully. Changes to persistence or cached assets should degrade gracefully for returning users instead of wiping or bypassing local state.
 
 ## Validation and CI Reality
@@ -107,12 +121,14 @@
 - `npm install`
 - `npm test`
 - `python3 -m http.server 4173`
+- `npm run dev:whisper`
+- `npm run dev:transcript -- --src ./path/to/transcript.txt`
 
 ## Known Gaps
 
 - No automated browser tests yet
 - No `axe` or `pa11y` automation yet
-- No bundled asset export yet
+- No bundled local asset export yet
 - No real `whisper-slides` runtime integration yet
 
 ## Search Policy

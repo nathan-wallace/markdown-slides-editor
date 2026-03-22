@@ -5,6 +5,7 @@ export const DEFAULT_PRESENTER_PANELS = [
   { id: "next", title: "Next slide", span: 4 },
   { id: "timer", title: "Timer", span: 3 },
   { id: "notes", title: "Notes", span: 6 },
+  { id: "captions", title: "Captions", span: 6 },
   { id: "outline", title: "Outline", span: 6 },
 ];
 

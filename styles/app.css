@@ -432,6 +432,11 @@ input:focus-visible {
   gap: 0.85rem;
 }
 
+.captions-transcript {
+  min-height: 8rem;
+  white-space: pre-wrap;
+}
+
 .slide-card {
   width: min(100%, calc(100vh * var(--slide-aspect-ratio)));
   max-width: min(100%, calc(var(--slide-width-px) * 1px));
@@ -831,6 +836,27 @@ input:focus-visible {
   background: var(--error);
 }
 
+.live-caption-display {
+  position: fixed;
+  left: 50%;
+  bottom: 0.85rem;
+  transform: translateX(-50%);
+  width: min(92vw, 72rem);
+  padding: 0.8rem 1rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  background: color-mix(in srgb, var(--panel-strong) 94%, black 6%);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  line-height: 1.45;
+  z-index: 15;
+}
+
+.live-caption-display[hidden] {
+  display: none;
+}
+
 .toc-dialog {
   width: min(560px, calc(100vw - 2rem));
   border: 1px solid var(--border);
@@ -1091,6 +1117,10 @@ input:focus-visible {
   }
 
   .snapshot-controls {
+    display: none !important;
+  }
+
+  .live-caption-display {
     display: none !important;
   }
 
