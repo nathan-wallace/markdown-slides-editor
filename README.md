@@ -43,6 +43,7 @@ Then open `http://localhost:4173`.
 - `.github/copilot-instructions.md`: onboarding notes for GitHub Copilot coding agent
 - `TODO.md`: future roadmap and integration ideas
 - `docs/accessibility-checklist.md`: project accessibility checklist
+- `docs/ai-authoring-workflow.md`: recommended workflow and prompt template for AI-assisted deck drafting
 - `docs/resources.md`: accessibility references and source material
 
 ## AI disclosure
