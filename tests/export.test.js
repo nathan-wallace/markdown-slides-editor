@@ -96,6 +96,30 @@ test("buildOnePageHtml renders all slides visible without navigation controls", 
   assert.equal(html.includes("window.print()"), false);
 });
 
+test("exported html falls back to default theme for invalid or empty theme metadata", () => {
+  const invalidThemeSnapshot = buildSnapshotHtml({
+    title: "Invalid theme snapshot",
+    cssText: "",
+    renderedSlides: [{ html: "<h1>One</h1>", stepCount: 0 }],
+    metadata: {
+      theme: "not-a-real-theme",
+    },
+    source: "# One",
+  });
+
+  const emptyThemeOnePage = buildOnePageHtml({
+    title: "Empty theme one page",
+    cssText: "",
+    renderedSlides: [{ html: "<h1>One</h1>", kind: "content" }],
+    metadata: {
+      theme: "",
+    },
+  });
+
+  assert.equal(invalidThemeSnapshot.includes('data-theme="default-high-contrast"'), true);
+  assert.equal(emptyThemeOnePage.includes('data-theme="default-high-contrast"'), true);
+});
+
 test("buildOdpPresentation creates an OpenDocument Presentation archive", () => {
   const odp = buildOdpPresentation({
     title: "Deck ODP",

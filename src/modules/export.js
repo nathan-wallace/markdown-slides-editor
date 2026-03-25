@@ -1,4 +1,9 @@
-import { buildDeckStyleAttribute, buildThemeLinkTag } from "./theme.js";
+import {
+  buildDeckStyleAttribute,
+  buildThemeLinkTag,
+  BUILT_IN_THEME_IDS,
+  DEFAULT_THEME_ID,
+} from "./theme.js";
 
 const textEncoder = new TextEncoder();
 const ODP_MIMETYPE = "application/vnd.oasis.opendocument.presentation";
@@ -397,6 +402,10 @@ export function buildExportBundle({ markdownSource, snapshotHtml, deckJson, odpB
   ]);
 }
 
+function getExportThemeId(metadata = {}) {
+  return BUILT_IN_THEME_IDS.includes(metadata.theme) ? metadata.theme : DEFAULT_THEME_ID;
+}
+
 export function buildOnePageHtml({ title, cssText, renderedSlides, metadata }) {
   const slidesMarkup = renderedSlides
     .map(
@@ -424,7 +433,7 @@ export function buildOnePageHtml({ title, cssText, renderedSlides, metadata }) {
       }
     </style>
   </head>
-  <body class="snapshot-body one-page-body" data-theme="${metadata.theme || "default-high-contrast"}" style="${buildDeckStyleAttribute(metadata)}">
+  <body class="snapshot-body one-page-body" data-theme="${getExportThemeId(metadata)}" style="${buildDeckStyleAttribute(metadata)}">
     <main class="presentation-shell" aria-label="All slides">
       ${slidesMarkup}
     </main>
@@ -461,7 +470,7 @@ export function buildSnapshotHtml({ title, cssText, renderedSlides, metadata, so
     ${buildThemeLinkTag(metadata)}
     <style>${cssText}</style>
   </head>
-  <body class="snapshot-body" data-theme="${metadata.theme || "default-high-contrast"}" style="${buildDeckStyleAttribute(metadata)}">
+  <body class="snapshot-body" data-theme="${getExportThemeId(metadata)}" style="${buildDeckStyleAttribute(metadata)}">
     <main class="presentation-shell" aria-live="polite">
       ${slidesMarkup}
       <nav class="snapshot-controls" aria-label="Presentation controls">
