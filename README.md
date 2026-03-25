@@ -271,6 +271,12 @@ For custom branding, set `themeStylesheet` to a CSS URL. That stylesheet is load
 
 Contributor guidance for built-in themes and token rules lives in `docs/theming.md`.
 
+## Pull request checklist (theme changes)
+
+When a pull request changes theme tokens, include a short Theme QA note in the PR description.
+
+- [ ] Theme QA notes added (contrast checks, focus ring visibility, status token legibility, and editor/audience/presenter spot checks)
+
 ## Color mode
 
 The editor and presenter interfaces support accessible light and dark modes.
