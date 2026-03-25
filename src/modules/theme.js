@@ -7,6 +7,7 @@ export const BUILT_IN_THEME_IDS = Object.freeze([
   "paper-warm",
   "night-slate",
   "civic-bright",
+  "glass-aurora",
 ]);
 
 export const BUILT_IN_THEMES = [
@@ -25,6 +26,10 @@ export const BUILT_IN_THEMES = [
   {
     id: "civic-bright",
     label: "Civic bright",
+  },
+  {
+    id: "glass-aurora",
+    label: "Glass aurora",
   },
 ].filter((theme) => BUILT_IN_THEME_IDS.includes(theme.id));
 

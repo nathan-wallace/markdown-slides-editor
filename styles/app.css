@@ -53,6 +53,21 @@
   --font-body: "Trebuchet MS", "Segoe UI", sans-serif;
 }
 
+:root[data-theme="glass-aurora"] {
+  --panel: color-mix(in srgb, rgba(255, 255, 255, 0.82) 78%, rgba(207, 250, 255, 0.24));
+  --panel-strong: color-mix(in srgb, rgba(255, 255, 255, 0.9) 74%, rgba(218, 242, 255, 0.3));
+  --panel-alt: color-mix(in srgb, rgba(250, 253, 255, 0.72) 76%, rgba(206, 233, 255, 0.28));
+  --accent: #3a6cf0;
+  --accent-soft: color-mix(in srgb, #3a6cf0 16%, rgba(255, 255, 255, 0.7));
+  --border: color-mix(in srgb, rgba(58, 108, 240, 0.42) 34%, rgba(255, 255, 255, 0.86));
+  --shadow: 0 24px 64px rgba(20, 38, 74, 0.2);
+  --body-layer-1: radial-gradient(circle at 10% 8%, rgba(149, 194, 255, 0.42), transparent 34%);
+  --body-layer-2: radial-gradient(circle at 86% 20%, rgba(181, 226, 255, 0.4), transparent 30%);
+  --body-layer-3: linear-gradient(135deg, #eff5ff 2%, #e2eefb 44%, #f4f8ff 100%);
+  --font-display: "Canela", "Iowan Old Style", "Palatino Linotype", serif;
+  --font-body: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0f1722;
