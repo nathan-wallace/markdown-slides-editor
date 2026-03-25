@@ -44,6 +44,20 @@ Then open:
 - `http://localhost:4173/present/`
 - `http://localhost:4173/presenter/`
 
+
+## GitHub Pages deployment
+
+This repository includes a GitHub Actions workflow at `.github/workflows/deploy-pages.yml` that:
+
+- runs `npm install` and `npm test` on pushes to `main`
+- deploys the static site to GitHub Pages when tests pass
+
+To enable it in your repository settings:
+
+1. Go to **Settings → Pages**.
+2. Set **Source** to **GitHub Actions**.
+3. Push to `main` (or run the workflow manually from the Actions tab).
+
 ## Project docs
 
 - `ACCESSIBILITY.md`: accessibility posture, validation expectations, and contributor guidance
@@ -70,8 +84,8 @@ Disclosure of AI use is important to this project.
 
 ### AI used to build this repository
 
-- OpenAI Codex, a GPT-5-based coding agent in the Codex desktop environment, was used during repository setup and early development.
-  It was used to scaffold the initial static application, write and revise project documentation, add tests, and update planning and guidance files.
+- OpenAI Codex, a GPT-5-based coding agent in the Codex desktop environment, was used during repository setup and ongoing development.
+  It has been used to scaffold the initial static application, write and revise project documentation, add tests, update planning and guidance files, and automate maintenance tasks such as CI/CD workflow setup.
 
 ### AI used when running the program
 
