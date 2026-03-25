@@ -9,6 +9,7 @@ import {
   BUILT_IN_THEME_IDS,
   DEFAULT_THEME_ID,
 } from "../src/modules/theme.js";
+import { compileSource } from "../src/modules/views/shared.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,6 +79,143 @@ test("applyDeckTheme deterministically falls back to default for unknown themes"
   try {
     applyDeckTheme({ theme: "totally-unknown-theme" });
     assert.equal(fakeDocument.documentElement.dataset.theme, DEFAULT_THEME_ID);
+  } finally {
+    globalThis.document = originalDocument;
+  }
+});
+
+test("applyDeckTheme uses compiled metadata theme when it is known", () => {
+  const originalDocument = globalThis.document;
+  const compiled = compileSource(`---
+theme: night-slate
+---
+# Deck`);
+
+  const themeLink = { href: "", disabled: true };
+  const fakeDocument = {
+    documentElement: {
+      dataset: {},
+      style: {
+        setProperty() {},
+      },
+    },
+    head: {
+      append() {},
+    },
+    querySelector() {
+      return themeLink;
+    },
+    createElement() {
+      return themeLink;
+    },
+  };
+
+  globalThis.document = fakeDocument;
+
+  try {
+    applyDeckTheme(compiled.metadata);
+    assert.equal(fakeDocument.documentElement.dataset.theme, "night-slate");
+  } finally {
+    globalThis.document = originalDocument;
+  }
+});
+
+test("applyDeckTheme creates a theme stylesheet link when missing", () => {
+  const originalDocument = globalThis.document;
+  const appended = [];
+  const fakeDocument = {
+    documentElement: {
+      dataset: {},
+      style: {
+        setProperty() {},
+      },
+    },
+    head: {
+      append(node) {
+        appended.push(node);
+      },
+    },
+    querySelector() {
+      return null;
+    },
+    createElement() {
+      return { id: "", rel: "", href: "", disabled: true };
+    },
+  };
+
+  globalThis.document = fakeDocument;
+
+  try {
+    applyDeckTheme({ theme: "night-slate", themeStylesheet: "https://example.com/theme.css" });
+    assert.equal(appended.length, 1);
+    assert.equal(appended[0].id, "deck-theme-stylesheet");
+    assert.equal(appended[0].rel, "stylesheet");
+    assert.equal(appended[0].href, "https://example.com/theme.css");
+    assert.equal(appended[0].disabled, false);
+  } finally {
+    globalThis.document = originalDocument;
+  }
+});
+
+test("applyDeckTheme updates theme stylesheet href and enables link when present", () => {
+  const originalDocument = globalThis.document;
+  const themeLink = { href: "https://old.example.com/theme.css", disabled: true };
+  const fakeDocument = {
+    documentElement: {
+      dataset: {},
+      style: {
+        setProperty() {},
+      },
+    },
+    head: {
+      append() {},
+    },
+    querySelector() {
+      return themeLink;
+    },
+    createElement() {
+      return themeLink;
+    },
+  };
+
+  globalThis.document = fakeDocument;
+
+  try {
+    applyDeckTheme({ themeStylesheet: "https://example.com/theme.css" });
+    assert.equal(themeLink.href, "https://example.com/theme.css");
+    assert.equal(themeLink.disabled, false);
+  } finally {
+    globalThis.document = originalDocument;
+  }
+});
+
+test("applyDeckTheme clears href and disables link when stylesheet is absent", () => {
+  const originalDocument = globalThis.document;
+  const themeLink = { href: "https://example.com/theme.css", disabled: false };
+  const fakeDocument = {
+    documentElement: {
+      dataset: {},
+      style: {
+        setProperty() {},
+      },
+    },
+    head: {
+      append() {},
+    },
+    querySelector() {
+      return themeLink;
+    },
+    createElement() {
+      return themeLink;
+    },
+  };
+
+  globalThis.document = fakeDocument;
+
+  try {
+    applyDeckTheme({});
+    assert.equal(themeLink.href, "");
+    assert.equal(themeLink.disabled, true);
   } finally {
     globalThis.document = originalDocument;
   }
