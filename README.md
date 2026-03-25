@@ -58,6 +58,7 @@ Then open:
 - `docs/layout-syntax.md`: layout directives for centered content, columns, media blocks, callouts, and quotes
 - `docs/manual-a11y-testing.md`: Sa11y-assisted and manual accessibility review workflow
 - `docs/resources.md`: accessibility references and source material
+- `docs/theming.md`: canonical contributor guide for built-in themes, token overrides, and color-mode-safe theming
 
 The editor also includes an `AI Prompt` button that builds a structured briefing prompt from the current deck metadata, slide topics, and references. Use that to brief an LLM, then paste the returned Markdown back into the editor for review and refinement.
 
@@ -267,6 +268,8 @@ Available built-in themes:
 - `civic-bright`
 
 For custom branding, set `themeStylesheet` to a CSS URL. That stylesheet is loaded after the built-in theme so it can override colors, typography, spacing, and other presentation styles.
+
+Contributor guidance for built-in themes and token rules lives in `docs/theming.md`.
 
 ## Color mode
 
