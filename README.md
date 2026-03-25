@@ -266,6 +266,7 @@ Available built-in themes:
 - `paper-warm`
 - `night-slate`
 - `civic-bright`
+- `glass-aurora`
 
 For custom branding, set `themeStylesheet` to a CSS URL. That stylesheet is loaded after the built-in theme so it can override colors, typography, spacing, and other presentation styles.
 
