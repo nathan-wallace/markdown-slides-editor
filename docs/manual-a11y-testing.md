@@ -134,6 +134,15 @@ For the deck itself, verify:
 - color is not the only way meaning is conveyed
 - motion is minimal and not distracting
 
+## Theme QA
+
+When a change touches theme tokens, color mode, or visual status styles, verify:
+
+- heading, body, and link text still meet required contrast targets in the active theme
+- focus rings remain clearly visible against editor, audience, and presenter backgrounds
+- warning, error, and info tokens remain legible and are not distinguishable by color alone
+- spot checks pass in all three surfaces: editor (`/`), audience (`/present/`), and presenter (`/presenter/`)
+
 ## DOM inspection checklist
 
 Inspect the rendered HTML in browser developer tools when the feature touches layout or rendering.

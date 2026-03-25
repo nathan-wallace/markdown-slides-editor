@@ -32,6 +32,7 @@ This checklist is informed by project goals, WCAG guidance, and the Intopia arti
 - Focus states must remain visible in editor and presentation views.
 - Motion must respect `prefers-reduced-motion`.
 - Do not rely on colour alone to convey meaning.
+- New or updated themes must preserve contrast targets and must not depend on color-only meaning for status or emphasis.
 - Prefer large, readable text and avoid all-caps blocks, excessive italics, and crowded layouts.
 - Avoid placing important content too low on the slide where it may be obscured in a room.
 - Motion should be minimized by default.
