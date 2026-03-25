@@ -23,6 +23,14 @@
   --font-body: "Avenir Next", "Segoe UI", sans-serif;
 }
 
+/* Built-in themes (:root[data-theme="<id>"]) */
+:root[data-theme="default-high-contrast"] {
+  --accent: #b14d2c;
+  --accent-soft: #ffe0d1;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  --font-body: "Avenir Next", "Segoe UI", sans-serif;
+}
+
 :root[data-theme="paper-warm"] {
   --accent: #9a4c1d;
   --accent-soft: #f6dbc8;

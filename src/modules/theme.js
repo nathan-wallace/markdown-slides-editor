@@ -1,10 +1,17 @@
 import { applySlideDimensions, buildSlideDimensionStyle } from "./slide-layout.js";
 
 const THEME_LINK_ID = "deck-theme-stylesheet";
+export const DEFAULT_THEME_ID = "default-high-contrast";
+export const BUILT_IN_THEME_IDS = Object.freeze([
+  DEFAULT_THEME_ID,
+  "paper-warm",
+  "night-slate",
+  "civic-bright",
+]);
 
 export const BUILT_IN_THEMES = [
   {
-    id: "default-high-contrast",
+    id: DEFAULT_THEME_ID,
     label: "Default high contrast",
   },
   {
@@ -19,7 +26,7 @@ export const BUILT_IN_THEMES = [
     id: "civic-bright",
     label: "Civic bright",
   },
-];
+].filter((theme) => BUILT_IN_THEME_IDS.includes(theme.id));
 
 function ensureThemeLink() {
   let link = document.querySelector(`#${THEME_LINK_ID}`);
@@ -33,7 +40,9 @@ function ensureThemeLink() {
 }
 
 export function applyDeckTheme(metadata = {}) {
-  const theme = metadata.theme || "default-high-contrast";
+  const theme = BUILT_IN_THEME_IDS.includes(metadata.theme)
+    ? metadata.theme
+    : DEFAULT_THEME_ID;
   document.documentElement.dataset.theme = theme;
   applySlideDimensions(metadata);
 
